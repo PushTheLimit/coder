@@ -21,13 +21,29 @@ describe("effectiveBudgetGroup", () => {
 		expect(effectiveBudgetGroup(mockSpend, group)).toEqual({ kind: "other" });
 	});
 
-	it("is everyone for the org-wide Everyone group", () => {
+	it("is everyone for the unlimited Everyone fallback", () => {
 		expect(
 			effectiveBudgetGroup(
 				{ ...mockSpend, effective_group_id: "org-1" },
 				group,
 			),
 		).toEqual({ kind: "everyone" });
+	});
+
+	it("is other for a budgeted Everyone group viewed from a regular group", () => {
+		expect(
+			effectiveBudgetGroup(
+				{
+					...mockSpend,
+					effective_group_id: "org-1",
+					effective_budget: {
+						spend_limit_micros: 1_000_000,
+						limit_source: "group",
+					},
+				},
+				group,
+			),
+		).toEqual({ kind: "other" });
 	});
 
 	it("is everyone when the viewed group is Everyone itself", () => {

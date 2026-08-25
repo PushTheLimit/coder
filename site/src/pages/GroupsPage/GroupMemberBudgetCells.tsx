@@ -26,11 +26,7 @@ export const GroupMemberBudgetCells: FC<{
 	spend: GroupMemberAISpend | undefined;
 }> = ({ group, userID, spend }) => {
 	const effective = effectiveBudgetGroup(spend, group);
-	const fromOtherGroup =
-		effective.kind === "other" ||
-		(effective.kind === "everyone" &&
-			group.id !== group.organization_id &&
-			Boolean(spend?.effective_budget));
+	const fromOtherGroup = effective.kind === "other";
 
 	// A null effective_group_id is a group in another org that can't be
 	// fetched, so only resolve the name when an ID exists.
@@ -179,9 +175,11 @@ type EffectiveBudgetGroup =
 
 /**
  * Resolves which group governs a member's AI budget. "none" means no budget
- * data loaded; "everyone" is the org-wide fallback when no named group sets a
- * budget. A null effective group means the budget resolves to a group in
- * another organization, so it can't be shown here.
+ * data loaded; "everyone" means either the viewed group is Everyone or the
+ * user has the unlimited Everyone fallback. A budgeted Everyone group is
+ * "other" when viewing a regular group. A null effective group means the
+ * budget resolves to a group in another organization, so it can't be shown
+ * here.
  */
 export function effectiveBudgetGroup(
 	spend: GroupMemberAISpend | undefined,
@@ -191,10 +189,12 @@ export function effectiveBudgetGroup(
 	if (groupId === null) {
 		return spend === undefined ? { kind: "none" } : { kind: "other" };
 	}
-	// Everyone shares the org's id; checked first so it wins when the viewed
-	// group is Everyone itself.
+	// A budgeted Everyone group is "other" when viewing a regular group. The
+	// unlimited fallback remains "everyone" so it renders as not allocated.
 	if (groupId === group.organization_id) {
-		return { kind: "everyone" };
+		return group.id === group.organization_id || !spend?.effective_budget
+			? { kind: "everyone" }
+			: { kind: "other" };
 	}
 	if (groupId === group.id) {
 		return { kind: "this" };
