@@ -14355,16 +14355,14 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		wantEffectiveGroup  bool
 		wantEffectiveLimit  sql.NullInt64
 		wantEffectiveSource sql.NullString
-		wantLimit           sql.NullInt64
-		wantSource          sql.NullString
 		wantSpend           int64
 	}{
 		{
-			name:               "NoBudgetNoSpend",
-			wantEffectiveGroup: false,
-			wantLimit:          sql.NullInt64{},
-			wantSource:         sql.NullString{},
-			wantSpend:          0,
+			name:                "NoBudgetNoSpend",
+			wantEffectiveGroup:  false,
+			wantEffectiveLimit:  sql.NullInt64{},
+			wantEffectiveSource: sql.NullString{},
+			wantSpend:           0,
 		},
 		{
 			name:                "GroupBudget",
@@ -14372,8 +14370,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 			wantEffectiveGroup:  true,
 			wantEffectiveLimit:  sql.NullInt64{Int64: 1_000_000, Valid: true},
 			wantEffectiveSource: sql.NullString{String: "group", Valid: true},
-			wantLimit:           sql.NullInt64{Int64: 1_000_000, Valid: true},
-			wantSource:          sql.NullString{String: "group", Valid: true},
 			wantSpend:           0,
 		},
 		{
@@ -14382,17 +14378,15 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 			wantEffectiveGroup:  true,
 			wantEffectiveLimit:  sql.NullInt64{Int64: 500_000, Valid: true},
 			wantEffectiveSource: sql.NullString{String: "user_override", Valid: true},
-			wantLimit:           sql.NullInt64{Int64: 500_000, Valid: true},
-			wantSource:          sql.NullString{String: "user_override", Valid: true},
 			wantSpend:           0,
 		},
 		{
-			name:               "NoBudgetWithSpend",
-			spend:              250,
-			wantEffectiveGroup: false,
-			wantLimit:          sql.NullInt64{},
-			wantSource:         sql.NullString{},
-			wantSpend:          250,
+			name:                "NoBudgetWithSpend",
+			spend:               250,
+			wantEffectiveGroup:  false,
+			wantEffectiveLimit:  sql.NullInt64{},
+			wantEffectiveSource: sql.NullString{},
+			wantSpend:           250,
 		},
 		{
 			name:                "BudgetWithSpend",
@@ -14401,8 +14395,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 			wantEffectiveGroup:  true,
 			wantEffectiveLimit:  sql.NullInt64{Int64: 1_000_000, Valid: true},
 			wantEffectiveSource: sql.NullString{String: "group", Valid: true},
-			wantLimit:           sql.NullInt64{Int64: 1_000_000, Valid: true},
-			wantSource:          sql.NullString{String: "group", Valid: true},
 			wantSpend:           250,
 		},
 	}
@@ -14461,8 +14453,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 			}
 			require.Equal(t, tt.wantEffectiveLimit, got[0].EffectiveSpendLimitMicros)
 			require.Equal(t, tt.wantEffectiveSource, got[0].EffectiveLimitSource)
-			require.Equal(t, tt.wantLimit, got[0].GroupSpendLimitMicros)
-			require.Equal(t, tt.wantSource, got[0].GroupLimitSource)
 			require.Equal(t, tt.wantSpend, got[0].GroupSpendMicros)
 		})
 	}
@@ -14508,8 +14498,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.Equal(t, int64(250), byID[userB.ID].GroupSpendMicros)
 		for _, row := range got {
 			require.False(t, row.EffectiveGroupID.Valid)
-			require.False(t, row.GroupSpendLimitMicros.Valid)
-			require.False(t, row.GroupLimitSource.Valid)
 		}
 	})
 
@@ -14543,8 +14531,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		// Then: per-user spend is summed across all days in the period.
 		require.Len(t, got, 1)
 		require.False(t, got[0].EffectiveGroupID.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(600), got[0].GroupSpendMicros)
 	})
 
@@ -14595,8 +14581,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.Equal(t, uuid.NullUUID{UUID: overrideTarget.ID, Valid: true}, got[0].EffectiveGroupID)
 		require.Equal(t, sql.NullInt64{Int64: 500_000, Valid: true}, got[0].EffectiveSpendLimitMicros)
 		require.Equal(t, sql.NullString{String: "user_override", Valid: true}, got[0].EffectiveLimitSource)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(0), got[0].GroupSpendMicros)
 	})
 
@@ -14648,8 +14632,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.Equal(t, uuid.NullUUID{UUID: winner, Valid: true}, got[0].EffectiveGroupID)
 		require.Equal(t, sql.NullInt64{Int64: 1_000_000, Valid: true}, got[0].EffectiveSpendLimitMicros)
 		require.Equal(t, sql.NullString{String: "group", Valid: true}, got[0].EffectiveLimitSource)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(0), got[0].GroupSpendMicros)
 	})
 
@@ -14690,8 +14672,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.Equal(t, uuid.NullUUID{UUID: org.ID, Valid: true}, got[0].EffectiveGroupID)
 		require.Equal(t, sql.NullInt64{Int64: 1_000_000, Valid: true}, got[0].EffectiveSpendLimitMicros)
 		require.Equal(t, sql.NullString{String: "group", Valid: true}, got[0].EffectiveLimitSource)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(0), got[0].GroupSpendMicros)
 	})
 
@@ -14732,8 +14712,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.Equal(t, uuid.NullUUID{UUID: org.ID, Valid: true}, got[0].EffectiveGroupID)
 		require.False(t, got[0].EffectiveSpendLimitMicros.Valid)
 		require.False(t, got[0].EffectiveLimitSource.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(250), got[0].GroupSpendMicros)
 	})
 
@@ -14778,8 +14756,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.False(t, got[0].EffectiveGroupID.Valid, "cross-org effective group must be masked")
 		require.False(t, got[0].EffectiveSpendLimitMicros.Valid)
 		require.False(t, got[0].EffectiveLimitSource.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(250), got[0].GroupSpendMicros)
 	})
 
@@ -14821,8 +14797,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.Equal(t, uuid.NullUUID{UUID: other.ID, Valid: true}, got[0].EffectiveGroupID)
 		require.Equal(t, sql.NullInt64{Int64: 1_000_000, Valid: true}, got[0].EffectiveSpendLimitMicros)
 		require.Equal(t, sql.NullString{String: "group", Valid: true}, got[0].EffectiveLimitSource)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(250), got[0].GroupSpendMicros)
 	})
 
@@ -14854,8 +14828,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		// Then: spend attributed to the other group is not counted.
 		require.Len(t, got, 1)
 		require.False(t, got[0].EffectiveGroupID.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(0), got[0].GroupSpendMicros)
 	})
 
@@ -14885,8 +14857,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.Len(t, got, 1)
 		require.Equal(t, member.ID, got[0].UserID)
 		require.False(t, got[0].EffectiveGroupID.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(0), got[0].GroupSpendMicros)
 	})
 
@@ -14960,8 +14930,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		require.False(t, got[0].EffectiveGroupID.Valid, "cross-org effective group must be masked")
 		require.False(t, got[0].EffectiveSpendLimitMicros.Valid)
 		require.False(t, got[0].EffectiveLimitSource.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(250), got[0].GroupSpendMicros)
 	})
 
@@ -14996,8 +14964,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		// Then: only current-period spend is aggregated.
 		require.Len(t, got, 1)
 		require.False(t, got[0].EffectiveGroupID.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(25), got[0].GroupSpendMicros)
 	})
 
@@ -15034,8 +15000,6 @@ func TestGetGroupMembersAISpend(t *testing.T) {
 		// Then: the prior UTC day's spend is excluded from the aggregate.
 		require.Len(t, got, 1)
 		require.False(t, got[0].EffectiveGroupID.Valid)
-		require.False(t, got[0].GroupSpendLimitMicros.Valid)
-		require.False(t, got[0].GroupLimitSource.Valid)
 		require.Equal(t, int64(25), got[0].GroupSpendMicros,
 			"sum must exclude prevMonthLastDay row after normalization")
 	})
