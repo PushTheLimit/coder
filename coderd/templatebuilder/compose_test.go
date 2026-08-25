@@ -714,8 +714,8 @@ func stripHCLCommentLines(s string) string {
 		if strings.HasPrefix(strings.TrimSpace(line), "#") {
 			continue
 		}
-		b.WriteString(line)
-		b.WriteByte('\n')
+		_, _ = b.WriteString(line)
+		_ = b.WriteByte('\n')
 	}
 	return b.String()
 }
