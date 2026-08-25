@@ -245,32 +245,22 @@ func newInterceptionProcessor(p provider.Provider, cbs *circuitbreaker.ProviderC
 		ctx, span := tracer.Start(r.Context(), "Intercept")
 		defer span.End()
 
-		if isWebSocketUpgrade(r) {
-			route := strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/%s", p.Name()))
-			client := GuessClient(r)
-			fields := []slog.Field{
-				slog.F("provider", p.Name()),
-				slog.F("provider_type", p.Type()),
-				slog.F("route", route),
-				slog.F("method", r.Method),
-				slog.F("client", string(client)),
-				slog.F("user_agent", r.UserAgent()),
-			}
-			if sessionID := GuessSessionID(client, r); sessionID != nil {
-				fields = append(fields, slog.F("client_session_id", *sessionID))
-			}
-			if actor := aibcontext.ActorFromContext(ctx); actor != nil {
-				fields = append(fields, slog.F("initiator_id", actor.ID))
-			}
-			logger.Debug(ctx, "rejecting unsupported WebSocket upgrade", fields...)
-			http.Error(w, "WebSocket transport is not supported, use HTTP", http.StatusNotImplemented)
-			return
-		}
-
 		// We execute this before CreateInterceptor since the interceptors
 		// read the request body and don't reset them.
 		client := GuessClient(r)
 		sessionID := GuessSessionID(client, r)
+
+		if isWebSocketUpgrade(r) {
+			route := strings.TrimPrefix(r.URL.Path, fmt.Sprintf("/%s", p.Name()))
+			logger.Debug(ctx, "rejecting unsupported WebSocket upgrade",
+				slog.F("provider", p.Name()),
+				slog.F("route", route),
+				slog.F("client", string(client)),
+				slog.F("client_session_id", sessionID),
+			)
+			http.Error(w, "WebSocket transport is not supported, use HTTP", http.StatusNotImplemented)
+			return
+		}
 
 		// Read and validate Agent Firewall correlation headers. The
 		// values are captured here and recorded below; the headers
@@ -405,8 +395,10 @@ func newInterceptionProcessor(p provider.Provider, cbs *circuitbreaker.ProviderC
 	}
 }
 
+// isWebSocketUpgrade reports whether r is a WebSocket opening handshake.
 func isWebSocketUpgrade(r *http.Request) bool {
-	return httpguts.HeaderValuesContainsToken(r.Header.Values("Connection"), "upgrade") &&
+	return r.Method == http.MethodGet &&
+		httpguts.HeaderValuesContainsToken(r.Header.Values("Connection"), "upgrade") &&
 		httpguts.HeaderValuesContainsToken(r.Header.Values("Upgrade"), "websocket")
 }
 
