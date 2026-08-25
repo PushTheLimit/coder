@@ -21,9 +21,9 @@ func TestIsWebSocketUpgrade(t *testing.T) {
 		want       bool
 	}{
 		{name: "websocket upgrade", method: http.MethodGet, connection: "keep-alive, Upgrade", upgrade: "WebSocket", want: true},
-		{name: "non-GET request", method: http.MethodPost, connection: "Upgrade", upgrade: "websocket"},
-		{name: "missing connection upgrade", method: http.MethodGet, connection: "keep-alive", upgrade: "websocket"},
-		{name: "different upgrade protocol", method: http.MethodGet, connection: "Upgrade", upgrade: "h2c"},
+		{name: "non-GET request", method: http.MethodPost, connection: "Upgrade", upgrade: "websocket", want: false},
+		{name: "missing connection upgrade", method: http.MethodGet, connection: "keep-alive", upgrade: "websocket", want: false},
+		{name: "different upgrade protocol", method: http.MethodGet, connection: "Upgrade", upgrade: "h2c", want: false},
 	}
 
 	for _, tc := range tests {
