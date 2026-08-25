@@ -153,6 +153,8 @@ interface AgentChatInputProps {
 	queuedMessages?: readonly ChatQueuedMessage[];
 	onDeleteQueuedMessage?: (id: number) => Promise<void> | void;
 	onPromoteQueuedMessage?: (id: number) => Promise<void> | void;
+	// Removes a queued message and returns its content to the composer.
+	onEditQueuedMessage?: (id: number) => Promise<void> | void;
 	// History editing state, owned by the parent.
 	isEditingHistoryMessage?: boolean;
 	onCancelHistoryEdit?: () => void;
@@ -376,6 +378,7 @@ export const AgentChatInput: FC<AgentChatInputProps> = ({
 	queuedMessages = [],
 	onDeleteQueuedMessage,
 	onPromoteQueuedMessage,
+	onEditQueuedMessage,
 	isEditingHistoryMessage = false,
 	onCancelHistoryEdit,
 	userPromptHistory = [],
@@ -1062,6 +1065,14 @@ export const AgentChatInput: FC<AgentChatInputProps> = ({
 					messages={queuedMessages}
 					onDelete={(id) => onDeleteQueuedMessage?.(id)}
 					onPromote={(id) => onPromoteQueuedMessage?.(id)}
+					onEdit={onEditQueuedMessage}
+					// Returning a queued message to the composer would
+					// overwrite whatever is already being written.
+					editDisabledReason={
+						isComposerEffectivelyEmpty
+							? undefined
+							: "Send or clear the composer to edit a queued message."
+					}
 					className="mb-2"
 				/>
 			)}

@@ -101,6 +101,7 @@ import {
 	useChatSelector,
 	useChatStore,
 } from "./components/ChatConversation/chatStore";
+import { getEditableContentPayload } from "./components/ChatConversation/messageParsing";
 import { useChatToolInvalidations } from "./components/ChatConversation/useChatToolInvalidations";
 import type { PendingAttachment } from "./components/ChatPageContent";
 import { workspaceSkillsFromChat } from "./components/ChatPageContent";
@@ -585,6 +586,36 @@ export function useConversationEditingState(deps: {
 		setEditingFileBlocks(fileBlocks ?? []);
 	};
 
+	// Loads text into the composer as an ordinary draft, persisted the
+	// same way typed input is so it survives a reload. Used when a
+	// queued message is returned to the composer.
+	const loadDraftIntoComposer = (text: string) => {
+		setDraftState({
+			editorInitialValue: text,
+			initialEditorState: undefined,
+		});
+		serializedEditorStateRef.current = undefined;
+		setRemountKey((k) => k + 1);
+		inputValueRef.current = text;
+		if (draftStorageKey) {
+			try {
+				// Plain text is the legacy draft format, which
+				// parseStoredDraft still reads. The first keystroke
+				// replaces it with a serialized editor state.
+				localStorage.setItem(draftStorageKey, text);
+			} catch {
+				// QuotaExceededError, silently discard the draft.
+			}
+		}
+		// The composer remounts to pick up the new draft, so focus has to
+		// wait for the replacement editor instance.
+		setTimeout(() => {
+			if (!isMobileViewport()) {
+				chatInputRef.current?.focus();
+			}
+		}, 0);
+	};
+
 	const handleCancelHistoryEdit = () => {
 		const savedText = draftBeforeHistoryEdit?.text ?? "";
 		const savedState = draftBeforeHistoryEdit?.editorState;
@@ -725,6 +756,7 @@ export function useConversationEditingState(deps: {
 		editingMessageId,
 		editingFileBlocks,
 		handleEditUserMessage,
+		loadDraftIntoComposer,
 		handleCancelHistoryEdit,
 		handleSendFromInput,
 		handleContentChange,
@@ -1498,6 +1530,35 @@ const AgentChatPage: FC = () => {
 		editing.handleEditUserMessage(...args);
 	};
 
+	// Editing a queued message returns it to the composer: the queue row
+	// is deleted and its text becomes an ordinary draft, so sending it
+	// again goes through the normal send path and queues at the tail if
+	// the chat is busy. Attachments cannot be restored into a draft, so
+	// the queue list disables the action for messages that carry them.
+	const handleEditQueuedMessage = async (id: number) => {
+		const queuedMessage = store
+			.getSnapshot()
+			.queuedMessages.find((message) => message.id === id);
+		if (!queuedMessage) {
+			return;
+		}
+		const { text, fileBlocks } = getEditableContentPayload(
+			queuedMessage.content,
+		);
+		if (fileBlocks && fileBlocks.length > 0) {
+			return;
+		}
+		try {
+			await handleDeleteQueuedMessage(id);
+		} catch (error) {
+			// handleDeleteQueuedMessage restored the queue, so the composer
+			// is left untouched.
+			toast.error(getErrorMessage(error, "Failed to edit queued message."));
+			throw error;
+		}
+		editing.loadDraftIntoComposer(text);
+	};
+
 	const chatTitle = chatQuery.data?.title;
 
 	const titleElement = (
@@ -2062,6 +2123,7 @@ const AgentChatPage: FC = () => {
 			handleInterrupt={handleInterrupt}
 			handleDeleteQueuedMessage={handleDeleteQueuedMessage}
 			handlePromoteQueuedMessage={handlePromoteQueuedMessage}
+			handleEditQueuedMessage={handleEditQueuedMessage}
 			onImplementPlan={handleImplementPlan}
 			onSendAskUserQuestionResponse={handleSendAskUserQuestionResponse}
 			handleArchiveAgentAction={handleArchiveAgentAction}
